@@ -3,11 +3,17 @@ import { createContext, useContext, useState } from "react";
 const ResumeContext = createContext();
 
 export function ResumeProvider({ children }) {
-  const [resumeText, setResumeText]   = useState("");
-  const [jobDesc, setJobDesc]         = useState("");
-  const [results, setResults]         = useState(null);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState(null);
+  const [resumeText, setResumeText]       = useState("");
+  const [jobDesc, setJobDesc]             = useState("");
+  const [results, setResults]             = useState(null);
+  const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState(null);
+  
+  // New parser states
+  const [parsedResume, setParsedResume]   = useState(null); // stores { meta, contact, sections, rawText, extractionQuality }
+  const [isParsed, setIsParsed]           = useState(false);
+  const [parseError, setParseError]       = useState(null);
+  const [parsing, setParsing]             = useState(false);
 
   // results clear karna — "Analyze Again" button ke liye
   function resetAll() {
@@ -15,6 +21,10 @@ export function ResumeProvider({ children }) {
     setJobDesc("");
     setResults(null);
     setError(null);
+    setParsedResume(null);
+    setIsParsed(false);
+    setParseError(null);
+    setParsing(false);
   }
 
   return (
@@ -25,6 +35,10 @@ export function ResumeProvider({ children }) {
         results,    setResults,
         loading,    setLoading,
         error,      setError,
+        parsedResume, setParsedResume,
+        isParsed, setIsParsed,
+        parseError, setParseError,
+        parsing, setParsing,
         resetAll,
       }}
     >

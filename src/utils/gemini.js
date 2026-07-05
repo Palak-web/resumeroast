@@ -30,6 +30,10 @@ ${resumeText}
 
 JOB DESCRIPTION:
 ${jobDescription}
+
+CRITICAL: Return ONLY raw valid JSON. 
+No markdown. No backticks. No explanation.
+Start directly with { and end with }
   `;
 
   // ------- API CALL -------
@@ -48,7 +52,7 @@ ${jobDescription}
       ],
       generationConfig: {
         temperature: 0.7,       // creativity level
-        maxOutputTokens: 2048,  // enough for full JSON
+        maxOutputTokens: 8192,// enough for full JSON
       }
     }),
   });
@@ -73,6 +77,8 @@ ${jobDescription}
   const cleaned = rawText
     .replace(/```json/gi, "")
     .replace(/```/g, "")
+    .replace(/^[^{]*/, "")
+    .replace(/[^}]*$/, "")
     .trim();
 
   try {
