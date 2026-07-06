@@ -1,7 +1,25 @@
 const API_KEY = import.meta.env.VITE_GEMINI_KEY;
 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-export async function analyzeResume(resumeText, jobDescription) {
+export async function analyzeResume(resumeInput, jobDescription) {
+  // Convert object or string payload cleanly
+  let resumeContent = "";
+  if (resumeInput && typeof resumeInput === "object") {
+    // It's a parsed resume structure { meta, contact, sections, rawText }
+    // Format sections and contact details to give the model clean structured inputs
+    resumeContent = `
+[STRUCTURED PARSED RESUME JSON]:
+${JSON.stringify({
+  contact: resumeInput.contact,
+  sections: resumeInput.sections,
+}, null, 2)}
+
+[RAW UNSTRUCTURED RESUME TEXT]:
+${resumeInput.rawText}
+`;
+  } else {
+    resumeContent = typeof resumeInput === "string" ? resumeInput : String(resumeInput);
+  }
 
   // ------- PROMPT -------
   const prompt = `
@@ -26,7 +44,7 @@ Use exactly this structure:
 }
 
 RESUME:
-${resumeText}
+${resumeContent}
 
 JOB DESCRIPTION:
 ${jobDescription}

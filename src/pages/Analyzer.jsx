@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useResume } from "../context/ResumeContext";
 import { analyzeResume } from "../utils/gemini";
 import { parseResponse } from "../utils/parseResponse";
-import { Flame, AlertCircle, FileText, Briefcase, Loader2 } from "lucide-react";
+import { Flame, AlertCircle, FileText, Briefcase, Loader2, FileEdit, Eye } from "lucide-react";
 import Loader from "../components/Loader";
+import ResumeUpload from "../components/ResumeUpload";
+import ParsingQuality from "../components/ParsingQuality";
 
 export default function Analyzer() {
   const navigate = useNavigate();
@@ -13,11 +16,15 @@ export default function Analyzer() {
     setResults,
     loading,    setLoading,
     error,      setError,
+    isParsed,
+    parsedResume,
   } = useResume();
+
+  const [showRawEdit, setShowRawEdit] = useState(false);
 
   async function handleAnalyze() {
     if (resumeText.trim().length < 50) {
-      setError("Please paste a valid resume (at least 50 characters).");
+      setError("Please upload a file or paste a valid resume (at least 50 characters).");
       return;
     }
     if (jobDesc.trim().length < 30) {
@@ -29,7 +36,9 @@ export default function Analyzer() {
     setLoading(true);
 
     try {
-      const raw = await analyzeResume(resumeText, jobDesc);
+      // Send either parsed JSON structure (as meta fields + text) or raw text depending on whether it exists
+      const resumeInput = parsedResume ? parsedResume : resumeText;
+      const raw = await analyzeResume(resumeInput, jobDesc);
       const parsed = parseResponse(raw);
       setResults(parsed);
       navigate("/result");
@@ -55,25 +64,70 @@ export default function Analyzer() {
           </div>
 
           {/* Form Container */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Resume Text Input */}
-            <div className="flex flex-col gap-4 p-6 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff]">
-              <label className="flex items-center gap-2 font-bold text-sm text-[#2d3748]">
-                <FileText className="w-4 h-4 text-[#7C3AED]" />
-                <span>Your Resume</span>
-              </label>
-              <textarea
-                className="w-full min-h-70 p-4 bg-[#e0e5ec] text-[#2d3748] shadow-[inset_6px_6px_12px_#b8bec7,inset_-6px_-6px_12px_#ffffff] rounded-2xl
-                           resize-none focus:outline-none placeholder-[#909cb0] transition duration-200 border-none outline-none text-sm font-medium"
-                placeholder="Paste the plain text of your resume here..."
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-                disabled={loading}
-              />
-              <div className="flex justify-between items-center text-xs text-[#5a6a85] font-bold px-1 select-none">
-                <span>Plain text copy</span>
-                <span>{resumeText.length} characters</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Resume Upload & Info Panel */}
+            <div className="flex flex-col gap-6">
+              {/* Upload Card */}
+              <div className="flex flex-col gap-4 p-6 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff]">
+                <label className="flex items-center gap-2 font-bold text-sm text-[#2d3748]">
+                  <FileText className="w-4 h-4 text-[#7C3AED]" />
+                  <span>Resume Source File</span>
+                </label>
+                
+                <ResumeUpload />
+
+                {isParsed && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRawEdit(!showRawEdit)}
+                    className="mt-2 flex items-center justify-center gap-2 py-3 bg-[#e0e5ec] text-xs font-bold text-[#7C3AED] rounded-2xl shadow-[4px_4px_8px_#b8bec7,-4px_-4px_8px_#ffffff] active:shadow-[inset_4px_4px_8px_#b8bec7,inset_-4px_-4px_8px_#ffffff] transition duration-200 cursor-pointer select-none"
+                  >
+                    {showRawEdit ? (
+                      <>
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Hide Extracted Text</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileEdit className="w-3.5 h-3.5" />
+                        <span>View / Edit Extracted Text</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
+
+              {/* Raw Text Fallback (Visible if not parsed, or explicitly toggled) */}
+              {(!isParsed || showRawEdit) && (
+                <div className="flex flex-col gap-4 p-6 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff] transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 font-bold text-sm text-[#2d3748]">
+                      <FileEdit className="w-4 h-4 text-[#7C3AED]" />
+                      <span>{isParsed ? "Extracted Plain Text" : "Or Paste Plain Resume"}</span>
+                    </label>
+                    {isParsed && (
+                      <span className="text-[10px] text-emerald-600 font-extrabold bg-emerald-500/10 px-2 py-1 rounded-md">
+                        Editable
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    className="w-full min-h-70 p-4 bg-[#e0e5ec] text-[#2d3748] shadow-[inset_6px_6px_12px_#b8bec7,inset_-6px_-6px_12px_#ffffff] rounded-2xl
+                               resize-none focus:outline-none placeholder-[#909cb0] transition duration-200 border-none outline-none text-sm font-medium"
+                    placeholder="Paste the plain text of your resume here..."
+                    value={resumeText}
+                    onChange={(e) => setResumeText(e.target.value)}
+                    disabled={loading}
+                  />
+                  <div className="flex justify-between items-center text-xs text-[#5a6a85] font-bold px-1 select-none">
+                    <span>Plain text copy</span>
+                    <span>{resumeText.length} characters</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Parsing Quality Indicators */}
+              {isParsed && <ParsingQuality />}
             </div>
 
             {/* Job Description Input */}
