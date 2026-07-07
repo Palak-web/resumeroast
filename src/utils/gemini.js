@@ -106,3 +106,136 @@ Start directly with { and end with }
     throw new Error("JSON parse failed. Gemini ne unexpected format diya.");
   }
 }
+
+export async function generateEnhancedResume(resumeInput, jobDescription, roastAnalysis) {
+  // Convert object or string payload cleanly
+  let resumeContent = "";
+  if (resumeInput && typeof resumeInput === "object") {
+    resumeContent = `
+[STRUCTURED PARSED RESUME JSON]:
+${JSON.stringify({
+  contact: resumeInput.contact,
+  sections: resumeInput.sections,
+}, null, 2)}
+
+[RAW UNSTRUCTURED RESUME TEXT]:
+${resumeInput.rawText || ""}
+`;
+  } else {
+    resumeContent = typeof resumeInput === "string" ? resumeInput : String(resumeInput);
+  }
+
+  const prompt = `
+You are a highly skilled resume writer and career consultant.
+Your objective is to rewrite the user's resume into a recruiter-ready, ATS-optimized version.
+
+To do this:
+1. Fix any weak resume bullets using the provided Roast Analysis and targeted improvements. Add action verbs, metrics, and achievements.
+2. Optimize the resume for the target job description by integrating relevant keywords naturally.
+3. Keep the tone professional, direct, and active.
+4. Maintain absolute factual accuracy. Do not make up fake credentials or titles.
+
+Return ONLY raw valid JSON — no markdown, no backticks, no explanation.
+Use exactly this structure:
+
+{
+  "summary": "<a compelling 3-4 sentence professional summary tailored to the target job>",
+  "experience": [
+    {
+      "company": "<company name>",
+      "position": "<job title>",
+      "startDate": "<start date>",
+      "endDate": "<end date>",
+      "location": "<location or empty>",
+      "highlights": [
+        "<optimized, high-impact bullet point 1 with action verbs and metrics>",
+        "<optimized, high-impact bullet point 2 with action verbs and metrics>"
+      ]
+    }
+  ],
+  "skills": ["<skill 1>", "<skill 2>"],
+  "projects": [
+    {
+      "name": "<project name>",
+      "description": "<project description>",
+      "url": "<project link or empty>",
+      "highlights": [
+        "<optimized bullet point 1>",
+        "<optimized bullet point 2>"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "<school name>",
+      "degree": "<degree, e.g. B.S. in Computer Science>",
+      "startDate": "<start date>",
+      "endDate": "<end date>",
+      "gpa": "<gpa or empty>",
+      "location": "<location or empty>"
+    }
+  ],
+  "certifications": ["<certification 1>"],
+  "fullText": "<A clean, beautifully formatted plain-text representation of the full resume ready for copy-pasting. Indent sections clearly with empty lines, use bullet points (-) for highlights, and include all contact info at the top. Do not use markdown blocks here.>"
+}
+
+ORIGINAL RESUME:
+${resumeContent}
+
+ROAST ANALYSIS AND CRITIQUE:
+${JSON.stringify(roastAnalysis, null, 2)}
+
+TARGET JOB DESCRIPTION:
+${jobDescription}
+
+CRITICAL: Return ONLY raw valid JSON. 
+No markdown. No backticks. No explanation.
+Start directly with { and end with }
+  `;
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: prompt }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.6,       // lower temperature for accuracy
+        maxOutputTokens: 8192,
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json();
+    throw new Error(errData?.error?.message || "Gemini API call failed during resume enhancement");
+  }
+
+  const data = await response.json();
+  const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!rawText) {
+    throw new Error("Empty response from Gemini during resume enhancement");
+  }
+
+  const cleaned = rawText
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .replace(/^[^{]*/, "")
+    .replace(/[^}]*$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseErr) {
+    console.error("Raw Gemini Response:", rawText);
+    throw new Error("JSON parse failed during resume enhancement. Try again.");
+  }
+}

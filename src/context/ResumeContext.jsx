@@ -3,6 +3,7 @@ import { parsePdf } from "../utils/parser/pdfParser";
 import { parseDocx } from "../utils/parser/docxParser";
 import { normalizeText } from "../utils/parser/textNormalizer";
 import { detectSections } from "../utils/parser/sectionDetector";
+import { generateEnhancedResume } from "../utils/gemini";
 
 const ResumeContext = createContext();
 
@@ -19,6 +20,12 @@ export function ResumeProvider({ children }) {
   const [parseError, setParseError]       = useState(null);
   const [parsing, setParsing]             = useState(false);
   const [parsingProgress, setParsingProgress] = useState(0);
+
+  // New enhanced resume states
+  const [enhancedResume, setEnhancedResume]         = useState(null); // stores { summary, experience, skills, projects, education, certifications, fullText }
+  const [generatingEnhanced, setGeneratingEnhanced] = useState(false);
+  const [enhancedError, setEnhancedError]           = useState(null);
+  const [wantsEnhanced, setWantsEnhanced]           = useState(null); // null/true/false
 
   // Function to process upload files
   async function parseResumeFile(file) {
@@ -66,6 +73,29 @@ export function ResumeProvider({ children }) {
     }
   }
 
+  // Trigger enhanced generation using Gemini
+  async function triggerEnhancedGeneration() {
+    if (!resumeText || !jobDesc || !results) {
+      setEnhancedError("Missing required data for resume enhancement.");
+      return;
+    }
+
+    setGeneratingEnhanced(true);
+    setEnhancedError(null);
+
+    try {
+      const resumeInput = parsedResume ? parsedResume : resumeText;
+      const enhanced = await generateEnhancedResume(resumeInput, jobDesc, results);
+      setEnhancedResume(enhanced);
+      setWantsEnhanced(true);
+    } catch (err) {
+      console.error("Context Resume Enhancement Error:", err);
+      setEnhancedError(err.message || "Failed to generate enhanced resume. Please try again.");
+    } finally {
+      setGeneratingEnhanced(false);
+    }
+  }
+
   // results clear karna — "Analyze Again" button ke liye
   function resetAll() {
     setResumeText("");
@@ -77,6 +107,10 @@ export function ResumeProvider({ children }) {
     setParseError(null);
     setParsing(false);
     setParsingProgress(0);
+    setEnhancedResume(null);
+    setGeneratingEnhanced(false);
+    setEnhancedError(null);
+    setWantsEnhanced(null);
   }
 
   return (
@@ -93,6 +127,11 @@ export function ResumeProvider({ children }) {
         parsing, setParsing,
         parsingProgress, setParsingProgress,
         parseResumeFile,
+        enhancedResume, setEnhancedResume,
+        generatingEnhanced, setGeneratingEnhanced,
+        enhancedError, setEnhancedError,
+        wantsEnhanced, setWantsEnhanced,
+        triggerEnhancedGeneration,
         resetAll,
       }}
     >

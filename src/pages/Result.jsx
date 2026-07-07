@@ -5,12 +5,22 @@ import ATSScore from "../components/ATSScore";
 import RoastCard from "../components/RoastCard";
 import KeywordPills from "../components/KeywordPills";
 import DiffView from "../components/DiffView";
-import { RotateCcw } from "lucide-react";
+import EnhancedResumePreview from "../components/EnhancedResumePreview";
+import { RotateCcw, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Result() {
   const navigate = useNavigate();
-  const { results, resetAll } = useResume();
+  const {
+    results,
+    resetAll,
+    enhancedResume,
+    generatingEnhanced,
+    enhancedError,
+    wantsEnhanced,
+    setWantsEnhanced,
+    triggerEnhancedGeneration,
+  } = useResume();
 
   useEffect(() => {
     // Redirect if direct page navigation with no data in context
@@ -67,6 +77,75 @@ export default function Result() {
 
         {/* Improvement Diff Card Section */}
         <DiffView improvements={results.improvements} />
+
+        {/* Enhanced Resume Step */}
+        {wantsEnhanced === null && !generatingEnhanced && !enhancedError && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff] text-center space-y-4"
+          >
+            <div className="space-y-1 text-center">
+              <h3 className="font-extrabold text-sm text-[#2d3748] flex items-center justify-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                <span>Generate Your Enhanced Resume?</span>
+              </h3>
+              <p className="text-xs text-[#5a6a85] font-semibold max-w-md mx-auto leading-relaxed">
+                We will rewrite bullet points to match the target job description, integrate missing keywords, fix roast critique items, and structure a clean version.
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center pt-2">
+              <button
+                onClick={() => setWantsEnhanced(false)}
+                className="px-6 py-2.5 bg-[#e0e5ec] text-xs font-bold text-[#5a6a85] rounded-xl shadow-[4px_4px_8px_#b8bec7,-4px_-4px_8px_#ffffff] active:shadow-[inset_4px_4px_8px_#b8bec7,inset_-4px_-4px_8px_#ffffff] transition duration-200 cursor-pointer"
+              >
+                No, Thanks
+              </button>
+              <button
+                onClick={triggerEnhancedGeneration}
+                className="px-6 py-2.5 bg-[#7C3AED] text-xs font-bold text-white rounded-xl hover:bg-[#6d28d9] shadow-[4px_4px_8px_#b8bec7,-4px_-4px_8px_#ffffff] active:shadow-[inset_4px_4px_8px_#b8bec7,inset_-4px_-4px_8px_#ffffff] transition duration-200 cursor-pointer"
+              >
+                Yes, Generate!
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {generatingEnhanced && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-8 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff] text-center space-y-4"
+          >
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7C3AED] mx-auto" />
+            <div className="space-y-1">
+              <p className="font-extrabold text-sm text-[#2d3748]">Optimizing and Rewriting Resume...</p>
+              <p className="text-xs text-[#5a6a85] font-semibold">Applying roaster critiques & injecting action verbs</p>
+            </div>
+          </motion.div>
+        )}
+
+        {enhancedError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-6 rounded-3xl bg-[#e0e5ec] shadow-[6px_6px_12px_#b8bec7,-6px_-6px_12px_#ffffff] text-center space-y-4"
+          >
+            <div className="text-rose-600 font-bold text-xs">
+              Failed to generate enhanced resume: {enhancedError}
+            </div>
+            <button
+              onClick={triggerEnhancedGeneration}
+              className="px-6 py-2 bg-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-[4px_4px_8px_#b8bec7] hover:bg-[#6d28d9] transition duration-200 cursor-pointer mx-auto block"
+            >
+              Retry Generation
+            </button>
+          </motion.div>
+        )}
+
+        {wantsEnhanced === true && enhancedResume && (
+          <EnhancedResumePreview />
+        )}
 
         {/* Bottom Button */}
         <div className="pt-4">
