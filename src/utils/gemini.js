@@ -3,7 +3,7 @@ const API_KEY = import.meta.env.VITE_GEMINI_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 export async function analyzeResume(resumeInput, jobDescription) {
   // Convert object or string payload cleanly
-  let resumeContent = "";
+  let resumeContent;
   if (resumeInput && typeof resumeInput === "object") {
     // It's a parsed resume structure { meta, contact, sections, rawText }
     // Format sections and contact details to give the model clean structured inputs
@@ -102,14 +102,14 @@ Start directly with { and end with }
   try {
     return JSON.parse(cleaned);
   } catch (parseErr) {
-    console.error("Raw Gemini response:", rawText);
-    throw new Error("JSON parse failed. Gemini ne unexpected format diya.");
+    console.error("Raw Gemini response:", rawText, parseErr);
+    throw new Error("JSON parse failed. Gemini ne unexpected format diya.", { cause: parseErr });
   }
 }
 
 export async function generateEnhancedResume(resumeInput, jobDescription, roastAnalysis) {
   // Convert object or string payload cleanly
-  let resumeContent = "";
+  let resumeContent;
   if (resumeInput && typeof resumeInput === "object") {
     resumeContent = `
 [STRUCTURED PARSED RESUME JSON]:
@@ -235,7 +235,7 @@ Start directly with { and end with }
   try {
     return JSON.parse(cleaned);
   } catch (parseErr) {
-    console.error("Raw Gemini Response:", rawText);
-    throw new Error("JSON parse failed during resume enhancement. Try again.");
+    console.error("Raw Gemini Response:", rawText, parseErr);
+    throw new Error("JSON parse failed during resume enhancement. Try again.", { cause: parseErr });
   }
 }
